@@ -25,9 +25,11 @@ class Field{
         this.grassState = new Array(this.area).fill(0);//[0:Void 1:Alive 2:Dead]
         this.grassAliveNeighbor = new Array(this.area).fill(0);
         this.grassAliveList = new Array();
-        this.grassSpawnAttemptPerFrame = 1;
         this.grassMinSpawnEnergy = 5;
-        this.grassEnergyConsumption = this.totalRadiantFlux/Math.pow(this.radiationRadius,2);
+        this.grassEnergyConsumption = this.totalRadiantFlux/Math.pow(this.radiationRadius,2)/2;
+        this.grassDespawnChance = 0.005;
+        this.grassReproduceChance = 0.1;
+        this.grassSpawnAttemptChance = 0.1;
     }
     getGaussDistribution(gaussianDistribution){
         /*-----------INFO ABOUT GAUSSIAN DISTRIBUTION-----------*/
@@ -57,9 +59,9 @@ class Field{
     updateField(time){
         this.updateSunPosition(time);
         this.calculateSolarIrradiance();
-        this.grassUseEnergy();
-        this.grassAttemptReproduce();
+        this.grassUpdate();
         this.grassAttemptSpawn();
+        this.grassAttemptReproduce();
         console.log(this.grassAliveList.length);
     }
     updateSunPosition(time){
@@ -91,7 +93,7 @@ class Field{
         }
 
     }
-    grassUseEnergy(){
+    grassUpdate(){
         for(let index=0;index<this.area;index++){
             if(this.grassState[index]==1){
                 this.energy[index] -= this.grassEnergyConsumption;
@@ -99,20 +101,19 @@ class Field{
                     this.grassDie(index);
                 }
             }else if(this.grassState[index]==2){
-                if(Math.random()<0.05){
-                    this.grassDespawn(index);
-                }
+                if(Math.random()>this.grassDespawnChance) continue;
+                this.grassDespawn(index);
             }
         }
     }
     grassAttemptSpawn(){
-        for(let attemptCount = 0;attemptCount<this.grassSpawnAttemptPerFrame;attemptCount++){
-            this.grassSpawn(randomInt(this.area));
-        }
+        if(Math.random()>this.grassSpawnAttemptChance) return;
+        this.grassSpawn(randomInt(this.area));
     }
     grassAttemptReproduce(){
         const aliveCount = this.grassAliveList.length;
         for(let iLiveGrass=0;iLiveGrass<aliveCount;iLiveGrass++){
+            if(Math.random()>this.grassReproduceChance) continue;
             const index = this.grassAliveList[iLiveGrass];
             if(this.grassAliveNeighbor[index]<8){
                 const [ x, y] = i2xy(index,this.width);
@@ -156,7 +157,7 @@ class Field{
             if(this.grassState[i]==0){
                 this.fieldImgData.data[i*4+0]=this.energy[i];
                 this.fieldImgData.data[i*4+1]=this.energy[i];
-                this.fieldImgData.data[i*4+2]=this.energy[i];
+                this.fieldImgData.data[i*4+2]=0;
             }else if(this.grassState[i]==1){
                 this.fieldImgData.data[i*4+0]=30;
                 this.fieldImgData.data[i*4+1]=200;
