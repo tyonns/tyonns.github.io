@@ -10,6 +10,7 @@
 	</head>
 	<body>
         <canvas id="field"></canvas>
+        <script src="functions.js"></script>
 		<script src="canvas.js"></script>
 		<script src="field.js"></script>
 		<script src="creature.js"></script>
@@ -20,38 +21,18 @@
             fieldCanvas.resize(400,400);
             fieldCanvas.fillAll("green");
 
-            console.log(fieldCanvas.canvas.width,fieldCanvas.canvas.height);
-
-            const field = new Field(fieldCanvas.canvas.width,fieldCanvas.canvas.height);
-            const grass = new Array();
-            for(let i=0;i<1;i++){
-                grass[i] = new Grass(field.sunX,field.sunY);
-                console.log(field.sunX,field.sunY);
-            }
-
+            const field = new Field(fieldCanvas);
             
             function updateEcosystem() 
             {
                 requestAnimationFrame(updateEcosystem);
-                fieldCanvas.fillAll("#D3BE9A");
                 //Update field,grass,and animals
                 const time = new Date();
                 const seconds = time.getSeconds();
                 const milliSec= time.getMilliseconds();
-                field.update(seconds+milliSec/1000);
-                const grassLength=grass.length
-                for(let i=0;i<grassLength;i++){
-                    grass[i].update();
-                }
-                //Destruct Creatures
-                for(let i=0;i<grassLength;i++){
-                    grass[i].update();
-                }
+                field.updateField(seconds+milliSec/1000);
                 //draw on Canvas
-                field.draw(fieldCanvas);
-                for(let i=0;i<grass.length;i++){
-                    grass[i].draw();
-                }
+                field.drawField(fieldCanvas);
             }
             updateEcosystem();
             

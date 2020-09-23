@@ -1,76 +1,194 @@
 class Field{
-    constructor(width,height){
-        this.width=width;
-        this.height=height;
-        this.h = this.width/2;
-        this.k = this.height/2;
-        this.sunStd = this.width*0.0001;
-        this.sunIntensity = 1.5;
-        this.energy = new Array(width*height).fill(50);
-        this.gaussianIntensityDistribution = new Array(1000);
-        this.spreadableTiles = new Array(width*height).fill(true);
-        this.getGaussDistribution(this.gaussianIntensityDistribution);
-        this.sunX;
-        this.sunY;
-        this.update(new Date().getSeconds()+0.5);/*
-        //Parameters for grass
-        this.grassEnergy = new Array(width*height).fill(0);
-        this.grassState  = new Array(width*height).fill(0);//[0:Doesn't Exist, 1:Dead, 2:Alive];
-        this.grassAliveIndex = new Array();
-        this.spreadableTiles = new Array(width*height).fill(true);*/
+    constructor(fieldCanvas){
+        //Geometric Parameter
+        this.width=fieldCanvas.canvas.width;
+        this.height=fieldCanvas.canvas.height;
+        this.area = this.width*this.height;
+        this.center_x = this.width/2;
+        this.center_y = this.height/2;
+        this.fieldImgData = fieldCanvas.ct.getImageData(0,0,this.width,this.height);
+
+        //Solar Radiation Parameter
+        this.totalRadiantFlux = 3000;      //[J/s]
+        this.radiationRadius = 90;     //[pixels]
+        this.solarRevolutionRadius = this.width/2-this.radiationRadius;//[pixels]
+        this.energy = new Array(this.area).fill(0);
+
+        //Guassian Distribution Parameter
+        this.arraySideLength = 30;      //[elements]
+        this.gaussianMagnifier = this.radiationRadius/this.arraySideLength;//[pixels/elements]
+        this.varianceAtEdge = 3;        //[sigma]
+        this.solarIrradiance = new Array(Math.pow(this.arraySideLength,2));
+        this.getGaussDistribution(this.solarIrradiance);
+
+        //Grass Parameter
+        this.grassState = new Array(this.area).fill(0);//[0:Void 1:Alive 2:Dead]
+        this.grassAliveNeighbor = new Array(this.area).fill(0);
+        this.grassAliveList = new Array();
+        this.grassSpawnAttemptPerFrame = 1;
+        this.grassMinSpawnEnergy = 5;
+        this.grassEnergyConsumption = this.totalRadiantFlux/Math.pow(this.radiationRadius,2);
     }
     getGaussDistribution(gaussianDistribution){
+        /*-----------INFO ABOUT GAUSSIAN DISTRIBUTION-----------*/
         /*
-        for(let iGauss=0;iGauss<gaussianDistribution.length;iGauss++){
-            const yGauss=Math.floor(iGauss/this.width)*4;
-            const xGauss=(iGauss%this.width)*4;
-            const distanceGauss = Math.sqrt((xGauss)*(xGauss)+(yGauss)*(yGauss));
-            gaussianDistribution[iGauss] = this.sunIntensity*Math.exp(-distanceGauss*distanceGauss/(2*this.sunStd*this.sunStd));
-        }
+        2D gaussian function f(x,y) can be expressed as
+            f(x,y) = A exp ( -{((x-x_0)**2)/(2σx**2)+((y-y_0)**2)/(2σy**2)})
+        Where A is the amplitude, x_0,y_0 are the center and σx and σy are the spread.
+        The Volume is given by
+            V = 2π*A*σx*σy
         */
-       for(let iGauss=0; iGauss<gaussianDistribution.length; iGauss++){
-            gaussianDistribution[iGauss]=this.sunIntensity*Math.exp(-((iGauss/gaussianDistribution.length * 10 * this.sunStd)**2)/(2*this.sunStd**2));
-       }
-    }
-    update(time){
-        const theta = (time/60)*2 * Math.PI;
-        this.sunX = this.h+ 0.7 * this.h*Math.cos(theta);
-        this.sunY = this.k+ 0.7 * this.k*Math.sin(theta);
-        this.sunShine();
-    }
-    draw(canvas){
-        canvas.ct.strokeStyle = "";
-        let imgData = canvas.ct.getImageData(0,0,this.width,this.height);
-        for(let i=0;i<this.energy.length;i++){
-            const y=Math.floor(i/this.width);
-            const x=i%this.width;
-            imgData.data[i*4+0]=this.energy[i];
-            imgData.data[i*4+1]=this.energy[i];
-            imgData.data[i*4+2]=this.energy[i];
+        const sigma_xy_element = this.arraySideLength/this.varianceAtEdge;
+        let totalRadiantFluxMeasured = 0;
+        //Calculate Gaussian Distribution without consideration of A
+        for(let iGauss=0;iGauss<gaussianDistribution.length;iGauss++){
+            const xGauss = iGauss%this.arraySideLength;
+            const yGauss = Math.floor(iGauss/this.arraySideLength);
+            gaussianDistribution[iGauss] = Math.exp(-( Math.pow(xGauss,2)/(2*Math.pow(sigma_xy_element,2))+Math.pow(yGauss,2)/(2*Math.pow(sigma_xy_element,2)) ));
+            totalRadiantFluxMeasured += 4*gaussianDistribution[iGauss]*Math.pow((this.radiationRadius/this.arraySideLength),2);
         }
-        canvas.ct.putImageData(imgData,0,0);
+        //Multiply each element by A to adjust the totalRadiantFlux (Q_in);
+        const A = this.totalRadiantFlux/totalRadiantFluxMeasured;
+        for(let iGauss=0;iGauss<gaussianDistribution.length;iGauss++){
+            gaussianDistribution[iGauss] *= A;
+        }
+
+    }
+    updateField(time){
+        this.updateSunPosition(time);
+        this.calculateSolarIrradiance();
+        this.grassUseEnergy();
+        this.grassAttemptReproduce();
+        this.grassAttemptSpawn();
+        console.log(this.grassAliveList.length);
+    }
+    updateSunPosition(time){
+        const theta = (time/60)*2 * Math.PI;
+        this.sunX = Math.floor(this.center_x+this.solarRevolutionRadius*Math.cos(theta));
+        this.sunY = Math.floor(this.center_y+this.solarRevolutionRadius*Math.sin(theta));
+    }
+    calculateSolarIrradiance(){
+        for(let iGauss=0;iGauss<this.solarIrradiance.length;iGauss++){
+            let dx = iGauss%this.arraySideLength*this.gaussianMagnifier;
+            let dy = Math.floor(iGauss/this.arraySideLength)*this.gaussianMagnifier;
+            const irradiance = this.solarIrradiance[iGauss];
+            for(let iDir=0;iDir<4;iDir++){
+                let xSign = Math.sign(1/dx);
+                let ySign = Math.sign(1/dy);
+                for(let xMag=0;xMag<this.gaussianMagnifier;xMag++){
+                    const xindex = this.sunX+dx+xMag*xSign+Math.min(xSign,0);
+                    for(let yMag=0;yMag<this.gaussianMagnifier;yMag++){
+                        const yindex = this.sunY+dy+yMag*ySign+Math.min(ySign,0);
+                        const index  = yindex*this.width+xindex;
+                        this.energy[index] += irradiance;
+                    }
+                }
+                //Rotate by 90 deg
+                const dx_save = dx;
+                dx = -dy;
+                dy = dx_save;
+            }
+        }
+
+    }
+    grassUseEnergy(){
+        for(let index=0;index<this.area;index++){
+            if(this.grassState[index]==1){
+                this.energy[index] -= this.grassEnergyConsumption;
+                if(this.energy[index]<this.grassMinSpawnEnergy){
+                    this.grassDie(index);
+                }
+            }else if(this.grassState[index]==2){
+                if(Math.random()<0.05){
+                    this.grassDespawn(index);
+                }
+            }
+        }
+    }
+    grassAttemptSpawn(){
+        for(let attemptCount = 0;attemptCount<this.grassSpawnAttemptPerFrame;attemptCount++){
+            this.grassSpawn(randomInt(this.area));
+        }
+    }
+    grassAttemptReproduce(){
+        const aliveCount = this.grassAliveList.length;
+        for(let iLiveGrass=0;iLiveGrass<aliveCount;iLiveGrass++){
+            const index = this.grassAliveList[iLiveGrass];
+            if(this.grassAliveNeighbor[index]<8){
+                const [ x, y] = i2xy(index,this.width);
+                const [dx,dy] = dxy[randomInt(8)];
+                const neighbori = xy2i([x+dx,y+dy],this.width);
+                this.grassSpawn(neighbori);
+            }
+        }
+    }
+    grassSpawn(index){
+        if(this.grassState[index]>=1) return;
+        if(this.energy[index]<this.grassMinSpawnEnergy){
+            return;
+        }
+        this.grassState[index] = 1;
+        this.grassAliveList.push(index);
+        this.grassUpdateNeighbour(index,true);
+    }
+    grassDie(index){
+        this.grassState[index] = 2;
+        this.grassAliveList.splice(this.grassAliveList.indexOf(index),1);
+    }
+    grassDespawn(index){
+        this.grassState[index] = 0;
+        this.grassUpdateNeighbour(index,false);        
+    }
+    grassUpdateNeighbour(index,add=true){
+        const [x,y] = i2xy(index,this.width);
+        for(let i=0;i<8;i++){
+            const [dx,dy] = dxy[i];
+            const neighbourx=dx+x;
+            const neighboury=dy+y;
+            if(neighbourx<0||neighbourx>=this.width) continue;
+            if(neighboury<0||neighboury>=this.height) continue;
+            const neighbori = xy2i([neighbourx,neighboury],this.width);
+            this.grassAliveNeighbor[neighbori] += (add?1:-1);
+        }
+    }
+    drawField(canvas){
+        for(let i=0;i<this.energy.length;i++){
+            if(this.grassState[i]==0){
+                this.fieldImgData.data[i*4+0]=this.energy[i];
+                this.fieldImgData.data[i*4+1]=this.energy[i];
+                this.fieldImgData.data[i*4+2]=this.energy[i];
+            }else if(this.grassState[i]==1){
+                this.fieldImgData.data[i*4+0]=30;
+                this.fieldImgData.data[i*4+1]=200;
+                this.fieldImgData.data[i*4+2]=20;
+            }else if(this.grassState[i]==2){
+                this.fieldImgData.data[i*4+0]=180;
+                this.fieldImgData.data[i*4+1]=50;
+                this.fieldImgData.data[i*4+2]=20;
+            }
+        }
+        canvas.ct.putImageData(this.fieldImgData,0,0);
+    }
+    drawField_rand(canvas){
+        for(let i=0;i<this.energy.length;i++){
+            if(this.grassState[i]==0){
+                this.fieldImgData.data[i*4+0]=this.energy[i];
+                this.fieldImgData.data[i*4+1]=this.energy[i];
+                this.fieldImgData.data[i*4+2]=this.energy[i];
+            }else if(this.grassState[i]==1){
+                this.fieldImgData.data[i*4+0]=255*randBtwn(0.0,0.4);
+                this.fieldImgData.data[i*4+1]=255*randBtwn(0.6,0.7);
+                this.fieldImgData.data[i*4+2]=255*randBtwn(0.0,0.4);
+            }else if(this.grassState[i]==2){
+                this.fieldImgData.data[i*4+0]=255*randBtwn(0.2,0.9);
+                this.fieldImgData.data[i*4+1]=255*randBtwn(0.0,0.3);
+                this.fieldImgData.data[i*4+2]=255*randBtwn(0.0,0.2);
+            }
+        }
+        canvas.ct.putImageData(this.fieldImgData,0,0);
     }
     changeEnergy(x,y,energyAdded){
         this.energy[x+y*this.width] += energyAdded;
-    }
-    sunShine(){
-        let totalEnergyAdded=0;
-        let maxEnergyAdded=0;
-        for(let iEnergy=0;iEnergy<this.energy.length;iEnergy++){
-            const y=Math.floor(iEnergy/this.width);
-            const x=iEnergy%this.width;
-            const distance = Math.floor((((Math.abs(y - this.sunY))**2 + Math.floor(Math.abs(x - this.sunX))**2) ** .5)/(this.width/this.gaussianIntensityDistribution.length));
-            //const deltaY=Math.floor(Math.abs(y - this.sunY));
-            //const deltaX=Math.floor(Math.abs(x - this.sunX));
-            let energyAdded = 0;
-            if(distance < this.gaussianIntensityDistribution.length)
-                energyAdded = this.gaussianIntensityDistribution[distance];  
-            totalEnergyAdded+=energyAdded;
-            maxEnergyAdded = Math.max(maxEnergyAdded,energyAdded);
-            this.changeEnergy(x,y,energyAdded);
-        }
-        console.log(totalEnergyAdded,maxEnergyAdded);
-
     }
 }
 
