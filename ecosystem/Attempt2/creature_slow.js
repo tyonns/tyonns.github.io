@@ -1,5 +1,5 @@
-const defaultInitialParametersHervabore = {minEnergy:100*milli_Q_in, maxTravelDist:1,energyAbsorptionRate:Q_in,energyConsumptionRateBase:0.2*milli_Q_in,energyConsumptionRateMove:1,rgbAlive:[255,255,255],rgbDead:[0,0,255]};
-const defaultInitialParametersCarnivore = {minEnergy:100*milli_Q_in, maxTravelDist:1,energyAbsorptionRate:Q_in,energyConsumptionRateBase:0.2*milli_Q_in,energyConsumptionRateMove:0.05,rgbAlive:[255,0,0],rgbDead:[255,255,255]};
+const defaultInitialParametersHervabore = {minEnergy:Q_in/10, maxTravelDist:1,energyAbsorptionRate:Q_in/1,energyConsumptionRateBase:Q_in/5000,energyConsumptionRateMove:1,rgbAlive:[255,255,255],rgbDead:[0,0,255]};
+const defaultInitialParametersCarnivore = {minEnergy:Q_in/100, maxTravelDist:1,energyAbsorptionRate:Q_in/1500,energyConsumptionRateBase:Q_in/15000,energyConsumptionRateMove:0.05,rgbAlive:[255,0,0],rgbDead:[255,255,255]};
 
 class CreatureManager{
     constructor(){
@@ -23,12 +23,18 @@ class CreatureManager{
         //checkLocationOfEach
         this.populationBinHervabore.fill(0);
         this.populationBinCarnivore.fill(0);
+        /*
+        let maxHerva = 0;
         for(let i=0;i<this.maxHervaCount;i++){
             if(this.hervabores[i].state==1){
                 const hervaIndex = this.hervabores[i].getIntIndex();
                 this.populationBinHervabore[hervaIndex]++;
+                if(this.populationBinHervabore>maxHerva){
+                    maxHerva=this.populationBinHervabore;
+                }
             }
         }
+        console.log(maxHerva);*/
         //Based On Current Situation, decide action [eat/move/reproduce]
         for(let i=0;i<this.maxHervaCount;i++){
             if(this.hervabores[i].state==1){
@@ -106,6 +112,7 @@ class Creature{
         this.y = y;
     }
     die(){
+        creatureMng.liveHervaCount-=1;
         this.state=0;
     }
     consumeEnergy(energyConsumed){
@@ -153,14 +160,27 @@ class Hervabore extends Creature{
     constructor(x,y){
         super(defaultInitialParametersHervabore,x,y);
     }
-    die(){
-        super.die();
-        creatureMng.liveHervaCount--;
-    }
-    actionIsMoveRandom(){
+    actionIsMoveToMoreGrass([currentX,currentY]){
+        let targetPixelOutOfFieldCount = 0;
+        let grassFound = false;
+        let targetX = 0;
+        let targetY = 0;
+        for(let i=0;i<8;i++){
+            let [dx,dy] = dxy[i];
+            const index = xy2i([dx+currentX,dy+currentY],width);
+            if(field.grassState[index]==1){
+                grassFound = true;
+                targetX += dx;
+                targetY += dy;
+            }
+        }
+        if(!grassFound||(targetX==0&&targetY==0)){
+            this.actionIsMoveToGrass([currentX,currentY]);
+        }else{
             this.action = 1;
-            this.targetX = this.x+randomInt(2*this.maxTravelDist)-randomInt(2*this.maxTravelDist);
-            this.targetY = this.y+randomInt(2*this.maxTravelDist)-randomInt(2*this.maxTravelDist);
+            this.targetX = currentX + targetX;
+            this.targetY = currentY + targetY;
+        }
     }
     actionIsMoveToGrass([currentX,currentY]){
         const indexOffset = randomInt(8);
@@ -190,63 +210,15 @@ class Hervabore extends Creature{
                 if(targetPixelOutOfFieldCount==8) couldNotFindGrass = true;
             }
             searchDistance++;
-            //if(searchDistance>width/4) couldNotFindGrass = true;
+            if(searchDistance>width/4) couldNotFindGrass = true;
         }
-        this.actionIsMoveRandom();
+        this.die();
+        //this.actionIsMoveRandom();
     }
-    actionIsMoveToMoreGrass([currentX,currentY]){
-        let targetPixelOutOfFieldCount = 0;
-        let grassFound = false;
-        let targetX = 0;
-        let targetY = 0;
-        for(let i=0;i<8;i++){
-            let [dx,dy] = dxy[i];
-            const index = xy2i([dx+currentX,dy+currentY],width);
-            if(field.grassState[index]==1){
-                grassFound = true;
-                targetX += dx;
-                targetY += dy;
-            }
-        }
-        if(!grassFound||(targetX==0&&targetY==0)){
-            this.actionIsMoveToGrass([currentX,currentY]);
-        }else{
+    actionIsMoveRandom(){
             this.action = 1;
-            this.targetX = currentX + targetX;
-            this.targetY = currentY + targetY;
-        }
-    }
-    getMoreOpen([currentX,currentY]){
-        let targetPixelOutOfFieldCount = 0;
-        let grassFound = false;
-        let targetX = 0;
-        let targetY = 0;
-        for(let i=0;i<8;i++){
-            let [dx,dy] = dxy[i];
-            const index = xy2i([dx+currentX,dy+currentY],width);
-            if(creatureMng.populationBinHervabore[index]==0){
-                grassFound = true;
-                targetX += dx;
-                targetY += dy;
-            }
-        }
-        return [Math.sign(targetX),Math.sign(targetY)];
-    }
-    getMoreGrass([currentX,currentY]){
-        let targetPixelOutOfFieldCount = 0;
-        let grassFound = false;
-        let targetX = 0;
-        let targetY = 0;
-        for(let i=0;i<8;i++){
-            let [dx,dy] = dxy[i];
-            const index = xy2i([dx+currentX,dy+currentY],width);
-            if(field.grassState[index]==1){
-                grassFound = true;
-                targetX += dx;
-                targetY += dy;
-            }
-        }
-        return [Math.sign(targetX),Math.sign(targetY)];
+            this.targetX = this.x+randomInt(2*this.maxTravelDist)-randomInt(2*this.maxTravelDist);
+            this.targetY = this.y+randomInt(2*this.maxTravelDist)-randomInt(2*this.maxTravelDist);
     }
     chooseAction(){
         //Aqcuire Important Parameters
@@ -254,48 +226,17 @@ class Hervabore extends Creature{
         const [currentX,currentY] = this.getIntXY();
 
         //Priority 1 Run if there is carnivore
-
-        //Priority 2 Eat grass if it can
-        if(field.grassState[myLocationIndex]==1){
-            this.action = 0;
-            return;
-        }
-
-        //Priority 3 Reproduce if it has enough energy
+        //Priority 3 Reproduce if it has enough Energy
         if(this.energy>this.minEnergy*48&&creatureMng.liveHervaCount!=creatureMng.maxHervaCount){
             this.action = 2;
             return;
         }
-
-        //Priority 4 Avoid Crowd and run toward more grass
-        const [openX ,openY ] = this.getMoreOpen ([currentX,currentY]);
-        const [grassX,grassY] = this.getMoreGrass([currentX,currentY]);
-        if((openX+grassX)!=0||(openY+grassY)!=0){
-            this.action = 1;
-            this.targetX = currentX + (openX+grassX);
-            this.targetY = currentY + (openY+grassY);
-            //console.log(openX,grassX,openY,grassY);
+        //Priority 4 Eat grass if there is Grass
+        if(field.grassState[myLocationIndex]==1){
+            this.action = 0;
             return;
         }
-
-        //Priority 5 Move toward closest grass
-        this.actionIsMoveToGrass([currentX,currentY]);
-    }
-    reproduce(){
-        const dx = Math.sign(randomInt(2)-0.5);
-        const dy = Math.sign(randomInt(2)-0.5);
-        const success = creatureMng.spawnHervabore([this.x+dx,this.y+dy]);
-        if(success) this.energy-=this.minEnergy*24;
-    }
-    eatGrass(){
-        const index = this.getIntIndex();
-        const energyLeftForGrass = field.energy[index];
-        const absorbableEnergy = Math.min(energyLeftForGrass,this.energyAbsorptionRate);
-        field.energy[index] -= absorbableEnergy;
-        this.energy += absorbableEnergy;
-    }
-    move(){
-        this.moveTo([this.targetX,this.targetY]);
+        this.actionIsMoveToMoreGrass([currentX,currentY]);
     }
     takeAction(){
         if(this.action==2){
@@ -312,6 +253,22 @@ class Hervabore extends Creature{
             this.move();
             return;
         }
+    }
+    reproduce(){
+        const dx = Math.sign(randomInt(2)-0.5);
+        const dy = Math.sign(randomInt(2)-0.5);
+        const success = creatureMng.spawnHervabore([this.x+dx,this.y+dy]);
+        if(success) this.energy-=this.minEnergy*24;
+    }
+    eatGrass(){
+        const index = this.getIntIndex();
+        const energyLeftForGrass = field.energy[index];
+        const absorbableEnergy = Math.min(energyLeftForGrass,this.energyAbsorptionRate);
+        field.energy[index] -= absorbableEnergy;
+        this.energy += absorbableEnergy;
+    }
+    move(){
+        this.moveTo([this.targetX,this.targetY]);
     }
 }
 
