@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Art</title>
+		<style>
+			body { margin: 0; }
+			canvas { display: block; }
+		</style>
+	</head>
+	<body>
+        <canvas id="field"></canvas>
+		<script src="canvas.js"></script>
+		<script src="artist.js"></script>
+		<script src="functions.js"></script>
+
+		<script>
+
+			const fieldCanvas = new Canvas(document.getElementById("field"));
+			fieldCanvas.resize(100,100);
+			const fieldArtist = new Artist(fieldCanvas.canvas.width,fieldCanvas.canvas.height,0,0,0,0);            
+			fieldCanvas.fillAll("black");
+			const fieldImgData = fieldCanvas.ct.getImageData(0,0,fieldCanvas.canvas.width,fieldCanvas.canvas.height);
+
+			function updateArt(){
+				requestAnimationFrame(updateArt);
+
+				if (!fieldArtist.isPixelColored.every(Boolean)){
+				fieldArtist.changePixel();
+				fieldArtist.drawPixel(fieldImgData);
+				fieldCanvas.ct.putImageData(fieldImgData,0,0);
+				if (fieldArtist.isPixelColored.every(Boolean)){
+					alert("Artwork Finished")
+				}
+				}
+			}
+
+			updateArt();
+
+            
+
+
+            
+            
+		</script>
+	</body>
+</html>
