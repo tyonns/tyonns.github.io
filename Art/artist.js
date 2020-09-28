@@ -36,7 +36,8 @@ class Artist {
         while (this.isPixelColored[this.pixelIndex]) {
 
             let circumference = maxPixelAway * 8;
-            let circumIndex = randomInt(circumference);
+            let circumIndex = Math.abs(Math.floor( Math.random()*2 + Math.sqrt(Math.sin(previousX)**2*10 + Math.cos(previousY)**2*10)))%circumference;//randomInt(circumference);
+            console.log(circumIndex);
             let circumCounter = 0;
 
             while (circumCounter < circumference && this.isPixelColored[this.pixelIndex]) {
@@ -53,7 +54,7 @@ class Artist {
 
             }
 
-            console.log(maxPixelAway);
+            //console.log(maxPixelAway);
             maxPixelAway++;
 
         }
@@ -80,9 +81,16 @@ class Artist {
     }
 
     changePixelColor(){
-        
-        let changeValue = 4;
-        this.pixelColor[this.rgbIndex] = this.pixelColor[this.rgbIndex] + this.colorIncrement[this.rgbIndex];
+        if (Math.random()<0.0001){
+            this.rgbIndex = (this.rgbIndex + 1) % 3;
+        }
+            
+        let changeValue = 1 + Math.random()*2;
+        if (Math.random()>0.2){
+            this.pixelColor[this.rgbIndex] = this.pixelColor[this.rgbIndex] + this.colorIncrement[this.rgbIndex];
+        } else {
+            this.pixelColor[this.rgbIndex+1] = this.pixelColor[this.rgbIndex+1] + this.colorIncrement[this.rgbIndex+1];
+        }
         if (this.pixelColor[this.rgbIndex]>=256 || this.pixelColor[this.rgbIndex]<=0)
         {
             this.colorIncrement[this.rgbIndex] *= -1;
@@ -99,7 +107,7 @@ class Artist {
     }
 
     drawPixel(fieldImgData) {
-        console.log(this.pixelIndex);
+        //console.log(this.pixelIndex);
         fieldImgData.data[this.pixelIndex * 4 + 0] = this.pixelColor[0];
         fieldImgData.data[this.pixelIndex * 4 + 1] = this.pixelColor[1];
         fieldImgData.data[this.pixelIndex * 4 + 2] = this.pixelColor[2];
