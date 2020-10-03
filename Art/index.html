@@ -17,13 +17,15 @@
 		<script>
 
 			const fieldCanvas = new Canvas(document.getElementById("field"));
-			fieldCanvas.resize(750/2,1334/2);
+			fieldCanvas.resize(256*2,160*2);
 			const fieldArtist = new Artist(fieldCanvas.canvas.width,fieldCanvas.canvas.height,0,0,0,0);            
 			fieldCanvas.fillAll("black");
 			const fieldImgData = fieldCanvas.ct.getImageData(0,0,fieldCanvas.canvas.width,fieldCanvas.canvas.height);
 
 			function updateArt(){
 				requestAnimationFrame(updateArt);
+
+
 
 				if (!fieldArtist.isPixelColored.every(Boolean)){
 				fieldArtist.changePixel();
@@ -35,7 +37,11 @@
 				}
 			}
 
-			updateArt();
+			const updatesPerFrame = 4;
+				for (let speedAnimate = 0; speedAnimate < updatesPerFrame; speedAnimate++){
+					updateArt();
+				}
+			
 
             
 

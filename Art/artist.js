@@ -9,10 +9,12 @@ class Artist {
         this.windSpeed = windSpeed;
         this.isPixelColored = new Array(this.area).fill(false);
         this.pixelColor = [randomInt(255), randomInt(255), randomInt(255)]; // r g b 
-        this.pixelIndex = randomInt(this.area);
+        this.pixelToPaint = randomInt(this.area);
+        this.pixelToMoveFrom = randomInt(this.area);
         this.rgbIndex = randomInt(2);
         this.colorCounter = 0;
         this.colorIncrement = [1,1,1]; //r g b
+        this.pixelChangePErcent = 1/randomInt(1000);
 
 
     }
@@ -24,7 +26,8 @@ class Artist {
     }
 
     changePixelLocation() {
-        const [previousX, previousY] = i2xy(this.pixelIndex, this.width)
+        
+        const [previousX, previousY] = i2xy(this.pixelToMoveFrom, this.width)
         if (this.isPixelColored.every(Boolean)) return;
 
         let relativeX;
@@ -33,21 +36,21 @@ class Artist {
         let newY;
         let maxPixelAway = 1;
 
-        while (this.isPixelColored[this.pixelIndex]) {
+        while (this.isPixelColored[this.pixelToPaint]) {
 
             let circumference = maxPixelAway * 8;
-            let circumIndex = Math.abs(Math.floor( Math.random()*2 + Math.sqrt(Math.sin(previousX)**2*10 + Math.cos(previousY)**2*10)))%circumference;//randomInt(circumference);
-            console.log(circumIndex);
+            let circumIndex = randomInt(circumference);
+            //console.log(circumIndex);
             let circumCounter = 0;
 
-            while (circumCounter < circumference && this.isPixelColored[this.pixelIndex]) {
+            while (circumCounter < circumference && this.isPixelColored[this.pixelToPaint]) {
 
                 [relativeX, relativeY] = this.convertRadInd2XY(circumIndex, maxPixelAway, circumference);
                 newX = Math.max(previousX + relativeX, 0);
                 newY = Math.max(previousY + relativeY, 0);
                 newX = Math.min(newX, this.width);
                 newY = Math.min(newY, this.height);
-                this.pixelIndex = xy2i([newX, newY], this.width);
+                this.pixelToPaint = xy2i([newX, newY], this.width);
 
                 circumIndex = (circumIndex + 1) % circumference;
                 circumCounter++;
@@ -57,6 +60,10 @@ class Artist {
             //console.log(maxPixelAway);
             maxPixelAway++;
 
+        }
+        if (Math.random()<this.pixelChangePErcent){
+            this.pixelToMoveFrom = this.pixelToPaint;
+            this.pixelChangePErcent = 1 / randomInt(3000)
         }
     }
 
@@ -81,37 +88,41 @@ class Artist {
     }
 
     changePixelColor(){
-        if (Math.random()<0.0001){
-            this.rgbIndex = (this.rgbIndex + 1) % 3;
+        let randomColor = randomInt(2);
+        let maxColorDif = 10;
+        if (Math.abs(this.pixelColor[this.rgbIndex] - this.pixelColor[(this.rgbIndex+1)%3])>maxColorDif || Math.abs(this.pixelColor[this.rgbIndex] - this.pixelColor[(this.rgbIndex+2)%3])>maxColorDif){
+            this.rgbIndex = (this.rgbIndex + randomColor) % 3;
         }
             
         let changeValue = 1 + Math.random()*2;
-        if (Math.random()>0.2){
-            this.pixelColor[this.rgbIndex] = this.pixelColor[this.rgbIndex] + this.colorIncrement[this.rgbIndex];
-        } else {
-            this.pixelColor[this.rgbIndex+1] = this.pixelColor[this.rgbIndex+1] + this.colorIncrement[this.rgbIndex+1];
-        }
-        if (this.pixelColor[this.rgbIndex]>=256 || this.pixelColor[this.rgbIndex]<=0)
-        {
-            this.colorIncrement[this.rgbIndex] *= -1;
-            this.pixelColor[(this.rgbIndex + 1)%3] += changeValue * this.colorIncrement[(this.rgbIndex + 1)%3] ;
-            this.pixelColor[(this.rgbIndex + 2)%3] += changeValue * this.colorIncrement[(this.rgbIndex + 2)%3] ;
-            if (this.pixelColor[(this.rgbIndex + 1)%3]>=256 || this.pixelColor[(this.rgbIndex + 1)%3]<=0){
-                this.colorIncrement[(this.rgbIndex + 1)%3] *= -1;
-            }
-            if (this.pixelColor[(this.rgbIndex + 2)%3]>=256 || this.pixelColor[(this.rgbIndex + 2)%3]<=0){
-                this.colorIncrement[(this.rgbIndex + 2)%3] *= -1;
-            }
-        }
+        let whichrgb = 0;
+
+        this.pixelColor[(this.rgbIndex+whichrgb)%3] = this.pixelColor[(this.rgbIndex+whichrgb)%3] + this.colorIncrement[(this.rgbIndex+whichrgb)%3];
+
+        if (this.pixelColor[(this.rgbIndex+whichrgb)%3] >= 255 || this.pixelColor[(this.rgbIndex+whichrgb)%3] <=0)
+            this.colorIncrement[(this.rgbIndex+whichrgb)%3] *= -1;
+
+        console.log(this.pixelColor);
 
     }
 
     drawPixel(fieldImgData) {
-        //console.log(this.pixelIndex);
-        fieldImgData.data[this.pixelIndex * 4 + 0] = this.pixelColor[0];
-        fieldImgData.data[this.pixelIndex * 4 + 1] = this.pixelColor[1];
-        fieldImgData.data[this.pixelIndex * 4 + 2] = this.pixelColor[2];
-        this.isPixelColored[this.pixelIndex] = true;
+        //console.log(this.pixelToPaint);
+        if (this.isPixelColored[(this.pixelToPaint+1)%this.area]){
+            fieldImgData.data[this.pixelToPaint * 4 + 0] = (fieldImgData.data[(this.pixelToPaint+1) * 4 + 0] + this.pixelColor[0])/2;
+            fieldImgData.data[this.pixelToPaint * 4 + 1] = (fieldImgData.data[(this.pixelToPaint+1) * 4 + 1] + this.pixelColor[1])/2;
+            fieldImgData.data[this.pixelToPaint * 4 + 2] = (fieldImgData.data[(this.pixelToPaint+1) * 4 + 2] + this.pixelColor[2])/2;
+        }else{
+
+        
+        fieldImgData.data[this.pixelToPaint * 4 + 0] = this.pixelColor[0];
+        fieldImgData.data[this.pixelToPaint * 4 + 1] = this.pixelColor[1];
+        fieldImgData.data[this.pixelToPaint * 4 + 2] = this.pixelColor[2];
+        }
+
+
+
+        this.isPixelColored[this.pixelToPaint] = true;
     }
 
 }
