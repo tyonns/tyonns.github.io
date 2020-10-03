@@ -1,6 +1,5 @@
-const defaultInitialParametersHervabore = {minEnergy:100*milli_Q_in, maxTravelDist:1,energyAbsorptionRate:Q_in,energyConsumptionRateBase:0.2*milli_Q_in,energyConsumptionRateMove:0.5,rgbAlive:[255,255,255],rgbDead:[0,0,255]};
+const defaultInitialParametersHervabore = {minEnergy:100*milli_Q_in, maxTravelDist:1,energyAbsorptionRate:Q_in,energyConsumptionRateBase:0.2*milli_Q_in,energyConsumptionRateMove:1,rgbAlive:[255,255,255],rgbDead:[0,0,255]};
 const defaultInitialParametersCarnivore = {minEnergy:100*milli_Q_in, maxTravelDist:1,energyAbsorptionRate:Q_in,energyConsumptionRateBase:0.2*milli_Q_in,energyConsumptionRateMove:0.05,rgbAlive:[255,0,0],rgbDead:[255,255,255]};
-const factor = 50;
 
 class CreatureManager{
     constructor(){
@@ -77,7 +76,7 @@ class Creature{
     constructor(initialParameters){
         //Parameters
         this.minEnergy = initialParameters.minEnergy;
-        this.maxEenrgy=this.minEnergy*factor;
+        this.maxEenrgy=this.minEnergy*50;
         this.maxTravelDist = initialParameters.maxTravelDist;
         this.energyAbsorptionRate = initialParameters.energyAbsorptionRate;
         this.energyConsumptionRateBase = initialParameters.energyConsumptionRateBase;
@@ -102,7 +101,7 @@ class Creature{
     }
     spawn([x,y]){
         this.state = 1;
-        this.energy = this.minEnergy*(factor-1)/2;
+        this.energy = this.minEnergy*24;
         this.x = x;
         this.y = y;
     }
@@ -263,7 +262,7 @@ class Hervabore extends Creature{
         }
 
         //Priority 3 Reproduce if it has enough energy
-        if(this.energy>this.minEnergy*(factor-1)&&creatureMng.liveHervaCount!=creatureMng.maxHervaCount){
+        if(this.energy>this.minEnergy*48&&creatureMng.liveHervaCount!=creatureMng.maxHervaCount){
             this.action = 2;
             return;
         }
@@ -286,7 +285,7 @@ class Hervabore extends Creature{
         const dx = Math.sign(randomInt(2)-0.5);
         const dy = Math.sign(randomInt(2)-0.5);
         const success = creatureMng.spawnHervabore([this.x+dx,this.y+dy]);
-        if(success) this.energy-=this.minEnergy*(factor-1)/2;
+        if(success) this.energy-=this.minEnergy*24;
     }
     eatGrass(){
         const index = this.getIntIndex();

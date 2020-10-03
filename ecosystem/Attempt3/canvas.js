@@ -88,7 +88,7 @@ class Canvas{
         this.canvas.style.display = "inline";
     }
     //DrawStrokeFill things on Canvas
-    text(string="empty string", x=0, y=0, color="black", font="10px 'Arial'", ta="left", tbl="top"){
+    text(string="empty string", x=0, y=0, color="black", font="10px 'Times'", ta="left", tbl="top"){
         this.ct.fillStyle = color;
         this.ct.font = font;
         this.ct.textAlign = ta;
@@ -99,14 +99,6 @@ class Canvas{
         this.ct.beginPath();
         this.ct.moveTo(xi+0.5,yi);
         this.ct.lineTo(xf+0.5,yf+1);
-        this.ct.closePath();
-        this.ct.stroke();
-    }
-    lines(x,y){
-        this.ct.beginPath();
-        this.ct.moveTo(x[0],y[0]);
-        for(let i=1;i<x.length;i++)
-            this.ct.lineTo(x[i],y[i]);
         this.ct.closePath();
         this.ct.stroke();
     }
@@ -129,64 +121,6 @@ class Canvas{
     }
     appendSelf(parent=body){
         parent.appendChild(this.canvas);
-    }
-    drawHorizontalArrow(xi,yi,xf,yf,width,color="black"){
-        const widthFactor = 2;
-        const minWidth = 10;
-        const wideWidth = Math.max(widthFactor*width/2,minWidth);
-        const gap = (xf-xi)*0.05;
-        const xmiddle = (xf-xi)*0.5+xi;
-        let x = new Array(8).fill(0);
-        let y = new Array(8).fill(0);
-        //Prepare Y list
-        y[0] = Math.floor(yi-width/2);
-        y[1] = Math.floor(yi+width/2);
-        y[2] = Math.floor(yi+width/2);
-        y[3] = Math.floor(yi+wideWidth);
-        y[4] = Math.floor(yi);
-        y[5] = Math.floor(yi-wideWidth);
-        y[6] = Math.floor(yi-width/2);
-        y[7] = Math.floor(yi-width/2);
-        //Prepare X list
-        x[0] = Math.floor(xi+gap);
-        x[1] = Math.floor(xi+gap);
-        x[2] = Math.floor(xmiddle);
-        x[3] = Math.floor(xmiddle);
-        x[4] = Math.floor(xf-gap);
-        x[5] = Math.floor(xmiddle);
-        x[6] = Math.floor(xmiddle);
-        x[7] = Math.floor(xi+gap);
-        this.ct.strokeStyle = color;
-        this.lines(x,y);
-    }
-    drawVerticalArrow(xi,yi,xf,yf,width,color="black"){
-        const widthFactor = 2;
-        const minWidth = 6;
-        const wideWidth = Math.max(widthFactor*width/2,minWidth);
-        const gap = (yf-yi)*0.05;
-        const ymiddle = (yf-yi)*0.5+yi;
-        let x = new Array(8).fill(0);
-        let y = new Array(8).fill(0);
-        //Prepare Y list
-        y[0] = Math.floor(yi+gap);
-        y[1] = Math.floor(yi+gap);
-        y[2] = Math.floor(ymiddle);
-        y[3] = Math.floor(ymiddle);
-        y[4] = Math.floor(yf-gap);
-        y[5] = Math.floor(ymiddle);
-        y[6] = Math.floor(ymiddle);
-        y[7] = Math.floor(yi+gap);
-        //Prepare X list
-        x[0] = Math.floor(xi-width/2);
-        x[1] = Math.floor(xi+width/2);
-        x[2] = Math.floor(xi+width/2);
-        x[3] = Math.floor(xi+wideWidth);
-        x[4] = Math.floor(xi);
-        x[5] = Math.floor(xi-wideWidth);
-        x[6] = Math.floor(xi-width/2);
-        x[7] = Math.floor(xi-width/2);
-        this.ct.strokeStyle = color;
-        this.lines(x,y);
     }
     //imageData
     createImageData(w=this.canvas.width,h=this.canvas.height){

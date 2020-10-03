@@ -35,7 +35,7 @@ class Field{
         this.grassEnergyConsumptionRate = 50*micro_Q_in;
         this.grassDespawnChance = 0.005;
         this.grassReproduceChance = 0.1;
-        this.grassSpawnAttemptChance = 1;
+        this.grassSpawnAttemptChance = 0.1;
     }
     getGaussDistribution(gaussianDistribution){
         /*-----------INFO ABOUT GAUSSIAN DISTRIBUTION-----------*/
@@ -68,18 +68,6 @@ class Field{
         this.grassUpdate();
         this.grassAttemptSpawn();
         this.grassAttemptReproduce();
-        this.updateInternalEnergy();
-    }
-    updateInternalEnergy(){
-        for(let i=0;i<this.energy.length;i++){
-            if(this.grassState[i]==0){
-                energyMng.uField += this.energy[i];
-            }else if(this.grassState[i]==1){
-                energyMng.uGrass += this.energy[i];
-            }else if(this.grassState[i]==2){
-                energyMng.uDeadgrass += this.energy[i];
-            }
-        }
     }
     updateSunPosition(time){
         const theta = (time/60)*2 * Math.PI;
@@ -100,17 +88,6 @@ class Field{
                         const yindex = this.sunY+dy+yMag*ySign+Math.min(ySign,0);
                         const index  = yindex*this.width+xindex;
                         this.energy[index] += irradiance;
-
-                        if(this.grassState[index]==0){
-                            energyMng.qSunToField[energyMng.clock] += irradiance;
-                            energyMng.qSunToFieldTotal += irradiance;
-                        }else if(this.grassState[index]==1){
-                            energyMng.qSunToGrass[energyMng.clock] += irradiance;
-                            energyMng.qSunToGrassTotal += irradiance;
-                        }else if(this.grassState[index]==2){
-                            energyMng.qSunToDeadgrass[energyMng.clock] += irradiance;
-                            energyMng.qSunToDeadgrassTotal += irradiance;
-                        }
                     }
                 }
                 //Rotate by 90 deg
@@ -125,8 +102,6 @@ class Field{
         for(let index=0;index<this.area;index++){
             if(this.grassState[index]==1){
                 this.energy[index] -= this.grassEnergyConsumptionRate;
-                energyMng.wGrass[energyMng.clock] += this.grassEnergyConsumptionRate;
-                energyMng.wGrassTotal += this.grassEnergyConsumptionRate;
                 if(this.energy[index]<this.grassMinSpawnEnergy){
                     this.grassDie(index);
                 }
@@ -159,21 +134,15 @@ class Field{
             return;
         }
         this.grassState[index] = 1;
-        energyMng.qFieldToGrass[energyMng.clock] += this.energy[index];
-        energyMng.qFieldToGrassTotal += this.energy[index];
         this.grassAliveList.push(index);
         this.grassUpdateNeighbour(index,true);
     }
     grassDie(index){
         this.grassState[index] = 2;
-        energyMng.qGrassToDeadgrass[energyMng.clock] += this.energy[index];
-        energyMng.qGrassToDeadgrassTotal += this.energy[index];
         this.grassAliveList.splice(this.grassAliveList.indexOf(index),1);
     }
     grassDespawn(index){
         this.grassState[index] = 0;
-        energyMng.qDeadgrassToField[energyMng.clock] += this.energy[index];
-        energyMng.qDeadgrassToFieldTotal += this.energy[index];
         this.grassUpdateNeighbour(index,false);        
     }
     grassUpdateNeighbour(index,add=true){
