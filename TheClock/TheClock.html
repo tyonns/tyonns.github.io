@@ -26,17 +26,15 @@
             //var faceMaterials = colors.map(function(c) { return new THREE.MeshLambertMaterial({ color: c , ambient: c });});
             //var cubeMaterials = new THREE.MeshFaceMaterial(faceMaterials);
             
-            let image = document.createElement('img0');
-            //image.src = "https://tcnunes.com/images/img/0.png";
 
             ///*
             let materials = [
-                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load(image)}),
-                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load(image)}),
-                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load(image)}),
-                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load(image)}),
-                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load(image)}),
-                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load(image)})
+                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load("img/0.png")}),
+                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load({color: 0xffffff })}),
+                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load({color: 0xffffff })}),
+                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load("img/1.png")}),
+                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load({color: 0xffffff })}),
+                new THREE.MeshBasicMaterial({map: new THREE.TextureLoader().load("img/2.png")})
             ];
             //*/
 
