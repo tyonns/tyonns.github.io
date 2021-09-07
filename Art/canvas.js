@@ -40,14 +40,6 @@ class Canvas{
             this.canvas.style.height = Math.floor(height)+"px";
         }
     }
-    hideCanvas(){
-        log("off2");
-        this.canvas.style.display = "none";
-    }
-    showCanvas(){
-        log("on2");
-        this.canvas.style.display = "inline";
-    }
     //DrawStrokeFill things on Canvas
     text(string="empty string", x=0, y=0, color="black", font="10px 'Times'", ta="left", tbl="top"){
         this.ct.fillStyle = color;
@@ -56,22 +48,8 @@ class Canvas{
         this.ct.textBaseline = tbl;
         this.ct.fillText(string,x,y);
     }
-    line(xi,yi,xf,yf){
-        this.ct.beginPath();
-        this.ct.moveTo(xi+0.5,yi);
-        this.ct.lineTo(xf+0.5,yf+1);
-        this.ct.closePath();
-        this.ct.stroke();
-    }
     fillAll(color="black"){
         this.fillRect(0,0,this.canvas.width,this.canvas.height,color);
-    }
-    drawRect(dx=0,dy=0,width=this.canvas.width,height=this.canvas.height,color="black"){
-        this.ct.strokeStyle = color;
-        this.ct.beginPath();
-        this.ct.rect(dx+0.5,dy+0.5,width-1,height-1);
-        this.ct.closePath();
-        this.ct.stroke();
     }
     fillRect(dx=0,dy=0,width=this.canvas.width,height=this.canvas.height,color="black"){
         this.ct.fillStyle = color;
@@ -88,139 +66,3 @@ class Canvas{
         this.imgdata = this.ct.createImageData(w,h);
     }
 }
-class PlotCanvas extends Canvas{
-    constructor(canvas=document.createElement("canvas")){
-        super(canvas);
-        this.reset(100,100);
-    }
-    reset(width,height){
-        if(this.canvas.width!=width+2||this.canvas.height!=height+2){
-            this.resize(width,height);
-            this.resizeStyle(width,height,true);
-            this.createImageData(width,height);
-            for(let i=0;i<width*height;i++){
-                this.imgdata.data[i*4+3] = 256;
-            }
-        }
-        this.clear();
-    }
-    resize(width,height){
-        super.resize(width+2,height+2);
-    }
-    resizeStyle(width,height,divideByPR){
-        super.resizeStyle(width+2,height+2,divideByPR);
-    }
-    clear(){
-        this.fillAll("black");
-        this.fillRect(1,1,this.canvas.width-2,this.canvas.height-2,"white");
-    }
-    update(data,width,height="fromWidth",autoScale=true){
-        const scale = autoScale?256/Math.max(1,getMax(data)):1;
-        if(height=="fromWidth"){
-            height = data.length/width;
-        }
-        this.reset(width,height);
-        for(let i=0;i<data.length;i++){
-            const brightness = 256-data[i]*scale;
-            this.imgdata.data[i*4+0]=brightness;
-            this.imgdata.data[i*4+1]=brightness;
-            this.imgdata.data[i*4+2]=brightness;
-        }
-        this.ct.putImageData(this.imgdata,1,1);
-    }
-}
-
-class GraphCanvas extends Canvas{
-    constructor(canvas=document.createElement("canvas")){
-        super(canvas);
-        this.clear();
-        this.fillRect(1,1,this.canvas.width-2,this.canvas.height-2,"white");
-    }
-    reset(width,height){
-        if(this.canvas.width!=width+2||this.canvas.height!=height+2){
-            this.resize(width,height);
-            this.resizeStyle(width,height,true);
-        }
-        this.clear();
-    }
-    resize(width,height){
-        super.resize(width+2,height+2);
-    }
-    resizeStyle(width,height,divideByPR){
-        super.resizeStyle(width+2,height+2,divideByPR);
-    }
-    clear(){
-        this.fillAll("black");    
-    }
-    update(data,scale="autoScale",width="dataLength",height=100){
-        scale = (scale=="autoScale")?height/Math.max(1,getMax(data)):scale;
-        if(width=="dataLength"){
-            width = data.length;
-        }
-        if(Array.isArray(data)){
-            this.reset(width,height);
-            for(let i=0;i<data.length;i++){
-                this.fillRect(i+1,1,1,this.canvas.height-data[i]*scale-2,"white");
-            }
-        }else{
-            alert("Data input for GraphCanvas needs to be 1-D Array");
-        }
-    }
-}
-
-class LogCanvas extends Canvas{
-    constructor(canvas=document.createElement("canvas"),lineSize=16){
-        super(canvas);
-        this.lineSize = lineSize;
-        this.font = ""+lineSize+"px 'Times'";
-        this.flexResize(0.95,0.2);
-        this.fillAll("white");
-        this.newLine("Logger Started...");
-    }
-    newLine(string="Empty"){
-        if(string.isArray){
-            let newString = "";
-            string.forEach((element)=>{
-                newString = newString+","+element;
-            });
-            string = newString;
-        }
-        this.text(string,0,0,"black",this.font);
-        this.ct.drawImage(this.canvas,0,this.lineSize);
-        this.fillRect(0,0,this.canvas.width,this.lineSize,"white");
-    }
-}
-
-class CodeCanvas extends Canvas{
-    constructor(canvas=document.createElement("canvas")){
-        super(canvas);
-    }
-    displayCode(num = 0,xi,xt){
-        let binary = "0"+num.toString(2)+"1";
-        while(binary.length<12) binary = "0"+binary;
-        const scale = this.pixelRatio;
-        const gap = 4;
-        const offset = 15*this.pixelRatio;
-        const g = 2*this.pixelRatio;
-        this.ct.strokeStyle = "black";
-        for(let i=0;i<12;i++){
-            this.ct.lineWidth = ((binary.charAt(i)=="1")?2:1)*scale;
-            this.line(xi+g,i*scale*gap+offset,xt-g,i*scale*gap+offset);
-        }        
-    }
-    displayCodes(){
-        const width = this.canvas.width;
-        const height = this.canvas.height;
-        this.fillAll("white");
-        this.ct.strokeStyle = "black";
-        log(this.ct.lineWidth);
-        const discNumber = 60;
-        for(let i=0;i<discNumber;i++){
-            this.ct.lineWidth = 1*this.pixelRatio;
-            this.line(i*width/discNumber,0,i*width/discNumber,height);
-            this.displayCode(i,i*width/discNumber,(i+1)*width/discNumber);
-        }
-    }
-}
-
-console.log("Loaded: canvas.js");

@@ -18,3 +18,6 @@ const xy2i=([x,y],width)=>{
 const i2xy=(i,width)=>{
     return [i%width,Math.floor(i/width)];
 }
+const mod=(n,m)=>{
+  return ((n % m) + m) % m;
+}
